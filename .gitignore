@@ -1,0 +1,51 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+yarn.lock
+
+# Compiled binary addons (http://nodejs.org/api/addons.html)
+build/
+
+# Dependency directories
+node_modules/
+
+# Distribution directories
+dist/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Output of 'npm pack'
+*.tgz
+package-lock.json
+
+# Yarn Integrity file
+.yarn-integrity
+
+# misc
+.DS_Store
+
+# env
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+npm-debug.log*
+
+coverage
+
+# vscode
+.vscode/launch.json
+
+# idea
+.idea/
+
+.vscode/settings.json
