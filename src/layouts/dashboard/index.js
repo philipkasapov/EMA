@@ -146,7 +146,7 @@ function Dashboard() {
           lastPrice: prev[currency.symbol] ? prev[currency.symbol].currentPrice : currentPrice,
           updatedAt: new Date().toLocaleString(),
           alarm: alarmTrigger,
-          lastAlarmDate: alarmTrigger ? new Date().toLocaleString() : prev[currency.symbol].lastAlarmDate
+          lastAlarmDate: alarmTrigger ? new Date().toLocaleString() : prev[currency.symbol]?.lastAlarmDate
         }
       };
 
