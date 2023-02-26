@@ -133,7 +133,10 @@ function Dashboard() {
     const currentPrice = currentPriceResult.price;
 
     setProcessedSymbols((prev) => {
-      const alarmTrigger = currentPrice >= prev.ema && prev.lastPrice <= prev.ema || currentPrice <= prev.ema && prev.lastPrice >= prev.ema;
+      const previousObject = prev[currency.symbol];
+      const alarmTrigger = previousObject ? (currentPrice >= previousObject.ema && previousObject.lastPrice <= previousObject.ema
+        || currentPrice <= previousObject.ema && previousObject.lastPrice >= previousObject.ema) : false;
+
       return {
         ...prev,
         [currency.symbol]:
@@ -143,9 +146,10 @@ function Dashboard() {
           lastPrice: prev[currency.symbol] ? prev[currency.symbol].currentPrice : currentPrice,
           updatedAt: new Date().toLocaleString(),
           alarm: alarmTrigger,
-          lastAlarmDate: alarmTrigger ? new Date().toLocaleString() : prev.lastAlarmDate
+          lastAlarmDate: alarmTrigger ? new Date().toLocaleString() : prev[currency.symbol].lastAlarmDate
         }
       };
+
     });
   }
 
@@ -209,16 +213,17 @@ function Dashboard() {
                   <Button onClick={() => removeSymbol(symbol)}>REMOVE</Button>
                 ),
               }
-            })} columns={[
-              { Header: "Asset", accessor: "asset", width: "5%", align: "left" },
-              { Header: "Current price", accessor: "currentPrice", width: "10%", align: "left" },
-              { Header: "Last price", accessor: "lastPrice", width: "10%", align: "center" },
-              { Header: "EMA200", accessor: "ema", width: "10%", align: "center" },
-              { Header: "Updated at", accessor: "updatedAt", width: "25%", align: "center" },
-              { Header: "Alarm", accessor: "alarm", width: "5%", align: "center" },
-              { Header: "Last alarm date", accessor: "lastAlarmDate", width: "25%", align: "center" },
-              { Header: "Options", accessor: "options", width: "5%", align: "center" },
-            ]} />
+            })} columns={
+              [
+                { Header: "Asset", accessor: "asset", width: "5%", align: "left" },
+                { Header: "Current price", accessor: "currentPrice", width: "10%", align: "left" },
+                { Header: "Last price", accessor: "lastPrice", width: "10%", align: "center" },
+                { Header: "EMA200", accessor: "ema", width: "10%", align: "center" },
+                { Header: "Updated at", accessor: "updatedAt", width: "25%", align: "center" },
+                { Header: "Alarm", accessor: "alarm", width: "5%", align: "center" },
+                { Header: "Last alarm date", accessor: "lastAlarmDate", width: "25%", align: "center" },
+                { Header: "Options", accessor: "options", width: "5%", align: "center" },
+              ]} />
           </Grid>
           {/* <Grid item xs={12} md={6} lg={4}>
             <OrdersOverview />
