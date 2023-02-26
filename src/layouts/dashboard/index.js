@@ -33,7 +33,7 @@ import reportsLineChartData from "layouts/dashboard/data/reportsLineChartData";
 
 // Dashboard components
 import AccessAlarmIcon from '@mui/icons-material/AccessAlarm';
-import { TextField } from "@mui/material";
+import { Button, TextField } from "@mui/material";
 import MDTypography from "components/MDTypography";
 import Projects from "layouts/dashboard/components/Projects";
 import { useEffect, useState } from "react";
@@ -44,7 +44,9 @@ const EMA_200_COEF = 802;
 const EMA_100_COEF = 411;
 const EMA_50_COEF = 200;
 const EMA_20_COEF = 72;
-const REFRESH_INTERVAL_MILLIS = 1000 * 60;
+const REFRESH_CURRENT_PRICE_INTERVAL_MILLIS = 1000 * 60;
+const REFRESH_EMA_INTERVAL_MILLIS = 1000 * 40;
+const EMA_REFRESH_HOURS = [10, 14, 18, 22, 2, 11];
 
 
 function Dashboard() {
@@ -54,41 +56,90 @@ function Dashboard() {
   const [inputCurrency, setInputCurrency] = useState('ETH');
   const [time, setTime] = useState(new Date());
 
+  // EMA update
   useEffect(() => {
     const interval = setInterval(() => {
-      let promises = [];
-      console.log('updating symbols:', processedSymbols, ' at: ', new Date().toLocaleTimeString())
-      Object.keys(processedSymbols)?.forEach(async (symbol, value) => {
-        promises.push(fetchDataBySymbol(symbol));
-      });
-      Promise.all(promises).then(result => {
-        setTime(new Date());
-      })
-    }, REFRESH_INTERVAL_MILLIS);
+      const current = new Date();
+      if (EMA_REFRESH_HOURS.includes(current.getHours()) && current.getMinutes() === 1) {
+        let promises = [];
+        console.log("Current hour: ", current.getHours());
+        console.log("Current minute: ", current.getMinutes());
+
+        console.log('updating ema data:', processedSymbols, ' at: ', new Date().toLocaleTimeString())
+        Object.keys(processedSymbols)?.forEach(async (symbol, value) => {
+          promises.push(updateCurrentSymbolState(symbol));
+        });
+        Promise.all(promises).then(result => {
+          setTime(new Date());
+        })
+      }
+
+    }, REFRESH_EMA_INTERVAL_MILLIS);
 
     return () => clearInterval(interval);
   }, [processedSymbols]);
 
-  const fetchDataBySymbol = async (symbol) => {
+  // Current price and alarm trigger update
+  useEffect(() => {
+    const interval = setInterval(() => {
+      let promises = [];
+      console.log('updating current data:', processedSymbols, ' at: ', new Date().toLocaleTimeString())
+
+      Object.keys(processedSymbols)?.forEach(async (symbol, value) => {
+        promises.push(updateCurrentSymbolState(symbol));
+      });
+
+      Promise.all(promises).then(result => {
+        setTime(new Date());
+      })
+    }, REFRESH_CURRENT_PRICE_INTERVAL_MILLIS);
+
+    return () => clearInterval(interval);
+  }, [processedSymbols]);
+
+  //Add an asset
+  useEffect(() => {
+    (async () => {
+      if (inputCurrency) {
+        await updateCurrentSymbolState(inputCurrency);
+        await updateEMAbySymbol(inputCurrency);
+      }
+    })();
+  }, [inputCurrency]);
+
+  const updateEMAbySymbol = async symbol => {
     const currency = cryptocurrencies.find(c => c?.symbol === symbol.toLowerCase());
     const result = await fetch(`https://api.coingecko.com/api/v3/coins/${currency.id}/market_chart?vs_currency=usd&days=90&interval=4h`).then(res => res.json());
     // const result = priceDataJson;
     const prices = result?.prices?.map(price => price[1]);
-
-    const currentPriceResult = await fetch(`https://api1.binance.com/api/v3/ticker/price?symbol=${currency?.symbol?.toUpperCase()}USDT`).then(res => res.json());
-    // const currentPriceResult = { [currency.id]: { "usd": 1603.14 } };
-
-    const currentPrice = currentPriceResult.price;
     const EMA200 = calculateEMA(prices, EMA_200_COEF);
 
     setProcessedSymbols((prev) => {
-      const alarmTrigger = currentPrice > EMA200 && prev.lastPrice < EMA200;
       return {
         ...prev,
         [currency.symbol]:
         {
-          currentPrice: currentPrice,
+          ...prev[currency.symbol],
           ema: EMA200,
+        }
+      };
+    });
+  }
+
+  const updateCurrentSymbolState = async (symbol) => {
+    const currency = cryptocurrencies.find(c => c?.symbol === symbol.toLowerCase());
+    const currentPriceResult = await fetch(`https://api1.binance.com/api/v3/ticker/price?symbol=${currency?.symbol?.toUpperCase()}USDT`).then(res => res.json());
+    // const currentPriceResult = { [currency.id]: { "usd": 1603.14 } };
+    const currentPrice = currentPriceResult.price;
+
+    setProcessedSymbols((prev) => {
+      const alarmTrigger = currentPrice >= prev.ema && prev.lastPrice <= prev.ema || currentPrice <= prev.ema && prev.lastPrice >= prev.ema;
+      return {
+        ...prev,
+        [currency.symbol]:
+        {
+          ...prev[currency.symbol],
+          currentPrice: currentPrice,
           lastPrice: prev[currency.symbol] ? prev[currency.symbol].currentPrice : currentPrice,
           updatedAt: new Date().toLocaleString(),
           alarm: alarmTrigger,
@@ -96,17 +147,7 @@ function Dashboard() {
         }
       };
     });
-
-    return { currentPrice: currentPrice, ema: EMA200, currency: currency };
   }
-
-  useEffect(() => {
-    (async () => {
-      if (inputCurrency) {
-        await fetchDataBySymbol(inputCurrency);
-      }
-    })();
-  }, [inputCurrency]);
 
   const calculateEMA = (closingPrices, period) => {
     const k = 2 / (period + 1);
@@ -116,6 +157,12 @@ function Dashboard() {
     }
 
     return ema;
+  }
+
+  const removeSymbol = symbol => {
+    let processedSymbolsCopy = { ...processedSymbols };
+    delete processedSymbolsCopy[symbol];
+    setProcessedSymbols(processedSymbolsCopy);
   }
 
   return (
@@ -158,8 +205,20 @@ function Dashboard() {
                     {processedSymbols[symbol].lastAlarmDate}
                   </MDTypography>
                 ),
+                options: (
+                  <Button onClick={() => removeSymbol(symbol)}>REMOVE</Button>
+                ),
               }
-            })} />
+            })} columns={[
+              { Header: "Asset", accessor: "asset", width: "5%", align: "left" },
+              { Header: "Current price", accessor: "currentPrice", width: "10%", align: "left" },
+              { Header: "Last price", accessor: "lastPrice", width: "10%", align: "center" },
+              { Header: "EMA200", accessor: "ema", width: "10%", align: "center" },
+              { Header: "Updated at", accessor: "updatedAt", width: "25%", align: "center" },
+              { Header: "Alarm", accessor: "alarm", width: "5%", align: "center" },
+              { Header: "Last alarm date", accessor: "lastAlarmDate", width: "25%", align: "center" },
+              { Header: "Options", accessor: "options", width: "5%", align: "center" },
+            ]} />
           </Grid>
           {/* <Grid item xs={12} md={6} lg={4}>
             <OrdersOverview />

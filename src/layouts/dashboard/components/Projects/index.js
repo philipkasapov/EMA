@@ -31,8 +31,8 @@ import DataTable from "examples/Tables/DataTable";
 // Data
 import data from "layouts/dashboard/components/Projects/data";
 
-function Projects({ rows }) {
-  const { columns } = data();
+function Projects({ rows, columns }) {
+  // const { columns } = data();
   const [menu, setMenu] = useState(null);
 
   const openMenu = ({ currentTarget }) => setMenu(currentTarget);

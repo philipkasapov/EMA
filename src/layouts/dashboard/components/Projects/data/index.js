@@ -78,6 +78,7 @@ export default function data() {
       { Header: "Updated at", accessor: "updatedAt", width: "25%", align: "center" },
       { Header: "Alarm", accessor: "alarm", width: "5%", align: "center" },
       { Header: "Last alarm date", accessor: "lastAlarmDate", width: "25%", align: "center" },
+      { Header: "Options", accessor: "options", width: "5%", align: "center" },
     ],
 
     rows: [
