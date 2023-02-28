@@ -137,6 +137,20 @@ function Dashboard() {
       const alarmTrigger = previousObject ? (currentPrice >= previousObject.ema && previousObject.lastPrice <= previousObject.ema
         || currentPrice <= previousObject.ema && previousObject.lastPrice >= previousObject.ema) : false;
 
+        if(alarmTrigger){
+          (async () => {
+            const rawResponse = await fetch('http://localhost:9000/sendMail', {
+              method: 'POST',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({subject: 'Alarm trigger', body: `Asset ${currency.symbol.toUpperCase()} is touching the EMA200 at current price: ${currentPrice}`})
+            });
+            await rawResponse.json();
+          })();
+        }
+
       return {
         ...prev,
         [currency.symbol]:
